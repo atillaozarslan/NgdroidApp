@@ -10,6 +10,13 @@ import istanbul.gamelab.ngdroid.util.Log;
  * Nitra Games Ltd.
  */
 
+/**
+ * 1-
+ * 2-
+ * 3-
+ * 4-
+ */
+
 public class MenuCanvas extends BaseCanvas {
 
 

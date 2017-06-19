@@ -3,12 +3,15 @@ package com.ngdroidapp;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.media.ExifInterface;
 
 import java.util.Random;
 import java.util.Vector;
 
 import istanbul.gamelab.ngdroid.base.BaseCanvas;
+import istanbul.gamelab.ngdroid.core.AppManager;
 import istanbul.gamelab.ngdroid.core.NgMediaPlayer;
+import istanbul.gamelab.ngdroid.gui.GUI;
 import istanbul.gamelab.ngdroid.util.Log;
 import istanbul.gamelab.ngdroid.util.Utils;
 
@@ -46,21 +49,29 @@ import istanbul.gamelab.ngdroid.util.Utils;
 public class GameCanvas extends BaseCanvas {
 
     /*Global Değişkenler*/
-    private Bitmap tileset, spritesheet, bullet, enemy, explode;
+    private Bitmap tileset, spritesheet, bullet, enemy, explode, laser;
+    private Bitmap buttons;
     private int kareno, animasyonno, animasyonyonu;
     private int spritex, spritey , hiz, hizx, hizy, bulletoffsetx_temp, bulletoffsety_temp, bulletspeed; // Shift+F6 - Refactor Kısatuşu
     private int bulletx_temp, bullety_temp, explodeFrameNo;
-    private int sesEfekti_patlama;
+    private int laserspeed, laserx1, lasery, laserx2;
     private int enemyX, enemyY, enemyspeedX, enemyspeedY, donmenoktasi;
     private Random enemyrnd;
+
+    private long prevTime, time;
+
+    private int sesEfekti_patlama;
     private NgMediaPlayer arkaplan_muzik;
 
     private boolean enemyexist, exploded;
-    private boolean donmeboolean;
+    private boolean donmeboolean, spriteExist;
+    private boolean guishow, playshow;
 
     public Vector <Rect> bulletdst;
     public Vector <Integer> bulletx2, bullety2, bulletoffsetx2, bulletoffsety2, bulletspeedx2, bulletspeedy2;
     private Rect tilesrc, tiledst, spritesrc, spritedst, bulletsrc, enemysrc, enemydst, explodesrc, explodedst;
+    private Rect restartsrc, restartdst, playsrc, playdst, exitsrc, exitdst;
+    private Rect lasersrc, laserdst, laserdst2;
 
 
 
@@ -80,11 +91,34 @@ public class GameCanvas extends BaseCanvas {
             e.printStackTrace();
         }
 
+        guishow = false;
+        playshow = true;
+
+        //region GUI
+        buttons = Utils.loadImage(root, "images/buttons.png");
+        restartsrc = new Rect();
+        restartdst = new Rect();
+        playsrc = new Rect();
+        playdst = new Rect();
+        exitsrc = new Rect();
+        exitdst = new Rect();
+        //endregion
+
+        prevTime = System.currentTimeMillis();
+
         arkaplan_muzik = new NgMediaPlayer(root);
         arkaplan_muzik.load("sounds/m2.mp3");
         arkaplan_muzik.setVolume(0.8f);
         arkaplan_muzik.prepare();
         arkaplan_muzik.start();
+
+        laser = Utils.loadImage(root, "images/beams1.png");
+        lasersrc = new Rect();
+        laserdst = new Rect();
+        laserdst2 = new Rect();
+        laserspeed = 16;
+        laserx1 = 0;
+        lasery = -400;
 
         tileset = Utils.loadImage(root, "images/tilea2.png");
         tilesrc = new Rect();
@@ -112,6 +146,7 @@ public class GameCanvas extends BaseCanvas {
         spritesheet = Utils.loadImage(root, "images/cowboy.png");
         spritesrc = new Rect();
         spritedst = new Rect();
+        spriteExist = true;
 
         kareno = 0;
         animasyonno = 1;
@@ -152,10 +187,49 @@ public class GameCanvas extends BaseCanvas {
     }
 
 
+
     public void update() {
 
-
         tilesrc.set(0,0,64,64);
+        playsrc.set(0,0,256,256);
+        playdst.set(getWidthHalf() - 64, getHeightHalf()-64, getWidthHalf() +64, getHeightHalf() + 64);
+
+        if (playshow){
+            return;
+        }
+
+
+        lasersrc.set(0,0,64,128);
+
+
+
+        restartsrc.set(256,0,512,256);
+        exitsrc.set(512,0,768,256);
+
+        restartdst.set(getWidthHalf() - 192, getHeightHalf()-64, getWidthHalf() -64, getHeightHalf() + 64);
+        exitdst.set(getWidthHalf() + 64, getHeightHalf()-64, getWidthHalf() + 192, getHeightHalf() + 64);
+
+
+
+        time = System.currentTimeMillis();
+        if(time > prevTime + 5000 && enemyexist){
+            prevTime = time;
+            laserx1 = enemyX;
+            laserx2 = enemyX + 192;
+            laserdst.set(laserx1, enemyY - 64, laserx1 + 32, enemyY);
+            laserdst2. set(laserx2 + 192, enemyY - 128, laserx2 + 256, enemyY);
+            lasery = enemyY - 100;
+        }
+
+        lasery -= laserspeed;
+        laserdst.set(laserx1, lasery, laserx1 + 32, lasery + 64);
+        laserdst2.set(laserx2, lasery, laserx2 + 32, lasery + 64);
+
+        if (spritedst.contains(laserdst) || spritedst.contains(laserdst2)){
+            spritedst.set(0,0,0,0);
+            spriteExist = false;
+            guishow = true;
+        }
 
         if (donmeboolean){
             if (enemyspeedX>0){
@@ -188,7 +262,7 @@ public class GameCanvas extends BaseCanvas {
             if(enemydst.contains(bulletdst.elementAt(i))){              //enemy.intersect yazdığımızda kurşunlar robota geldiğinde robotla etkileşim kurup robotun şeklini kendine benzeterek çıkana
                //Log.i(TAG, "Carpıştı");                                //kadar robot şeklinde ilerledi. Ama .contains yazdığımızda kurşunları içermiş oldu ve hata düzeldi.
 
-                explodedst.set(bulletx2.elementAt(i) - 64, bullety2.elementAt(i) - 64, bulletx2.elementAt(i) +64, bullety2.elementAt(i) + 64);
+                explodedst.set(enemyX - 64, enemyY - 64, enemyX + 256, enemyY + 256);
                 bulletx2.removeElementAt(i);
                 bullety2.removeElementAt(i);
                 /*bulletoffsetx2.removeElementAt(i);
@@ -208,7 +282,7 @@ public class GameCanvas extends BaseCanvas {
             explodesrc = getExplodeFrame(explodeFrameNo);
         }
 
-        if(explodeFrameNo == 15){
+        if(explodeFrameNo == 16){
             explodeFrameNo = 0;
             exploded = false;
         }
@@ -280,16 +354,18 @@ public class GameCanvas extends BaseCanvas {
         if(Math.abs(hizx) > 0 || Math.abs(hizy) > 0){
             animasyonno = 1;
         }
-        else{
+        else {
             animasyonno = 0;
         }
 
+        spritesrc.set(kareno * 128, animasyonyonu * 128, (kareno + 1) * 128, (animasyonyonu + 1) * 128);        //Resimden aldığımız koordinatlar
 
-        spritesrc.set(kareno*128, animasyonyonu*128, (kareno+1)*128, (animasyonyonu+1)*128);        //Resimden aldığımız koordinatlar
-        spritedst.set(spritex, spritey, spritex+256, spritey+256);       //Ekrana çizeleceği koordinatlar
-
-
+        if (spriteExist) {
+           // Log.i(TAG, String.valueOf(spritex));
+            spritedst.set(spritex, spritey, spritex + 256, spritey + 256);       //Ekrana çizeleceği koordinatlar
+        }
         bulletsrc.set(0,0,70,70);
+
 
         for(int i= 0; i<bulletdst.size(); i++){
 
@@ -331,6 +407,21 @@ public class GameCanvas extends BaseCanvas {
             canvas.drawBitmap(explode, explodesrc, explodedst, null);
         }
 
+        canvas.drawBitmap(laser, lasersrc, laserdst, null);
+        canvas.drawBitmap(laser, lasersrc, laserdst2, null);
+
+
+        //region Buttons
+        if(playshow) {
+            canvas.drawBitmap(buttons, playsrc, playdst, null);
+        }
+
+        if (guishow) {
+
+            canvas.drawBitmap(buttons, restartsrc, restartdst, null);
+            canvas.drawBitmap(buttons, exitsrc, exitdst, null);
+        }
+        //endregion
 
         //bulletoffsetx+=bulletspeedx;
     }
@@ -379,6 +470,8 @@ public class GameCanvas extends BaseCanvas {
     }
 
     public void touchUp(int x, int y) {
+
+        //region control
         if(x-touchx>100){
             animasyonno=1;
             animasyonyonu=0;
@@ -444,6 +537,31 @@ public class GameCanvas extends BaseCanvas {
 
             bulletdst.add(new Rect(bulletx_temp, bullety_temp, bulletx_temp +32, bullety_temp + 32));
         }
+        //endregion
+
+        //region guicontrol
+        if (playshow){
+            if (playdst.contains(x, y)) {
+                Log.i(TAG, "PLAY TIKLANDI");
+                playshow = false;
+
+            }
+        }
+        if(guishow) {
+
+            if (restartdst.contains(x, y)) {
+                Log.i(TAG, "RESTART TIKLANDI");
+                root.setup();
+
+            }
+            if (exitdst.contains(x, y)) {
+                Log.i(TAG, "EXIT TIKLANDI");
+
+                System.exit(0);
+            }
+        }
+
+        //endregion
     }
 
 
