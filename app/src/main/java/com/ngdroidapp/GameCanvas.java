@@ -2,6 +2,7 @@ package com.ngdroidapp;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.media.ExifInterface;
 
@@ -60,7 +61,7 @@ public class GameCanvas extends BaseCanvas {
 
     private long prevTime, time;
 
-    private int sesEfekti_patlama;
+    private int sesEfekti_patlama, bulletsound;
     private NgMediaPlayer arkaplan_muzik;
 
     private boolean enemyexist, exploded;
@@ -70,8 +71,13 @@ public class GameCanvas extends BaseCanvas {
     public Vector <Rect> bulletdst;
     public Vector <Integer> bulletx2, bullety2, bulletoffsetx2, bulletoffsety2, bulletspeedx2, bulletspeedy2;
     private Rect tilesrc, tiledst, spritesrc, spritedst, bulletsrc, enemysrc, enemydst, explodesrc, explodedst;
-    private Rect restartsrc, restartdst, playsrc, playdst, exitsrc, exitdst;
+    private Rect restartsrc, restartdst;
     private Rect lasersrc, laserdst, laserdst2;
+
+    private Paint textcolor;
+    private int textsize;
+    private String text;
+    private Rect textdst;
 
 
 
@@ -85,6 +91,7 @@ public class GameCanvas extends BaseCanvas {
 
     public void setup() {
         try {
+            bulletsound = root.soundManager.load("sounds/McGree.mp3");
             sesEfekti_patlama = root.soundManager.load("sounds/se2.wav");
         } catch (Exception e){
             System.out.print("Hata var");
@@ -98,19 +105,19 @@ public class GameCanvas extends BaseCanvas {
         buttons = Utils.loadImage(root, "images/buttons.png");
         restartsrc = new Rect();
         restartdst = new Rect();
-        playsrc = new Rect();
-        playdst = new Rect();
-        exitsrc = new Rect();
-        exitdst = new Rect();
+
         //endregion
 
         prevTime = System.currentTimeMillis();
 
+
         arkaplan_muzik = new NgMediaPlayer(root);
-        arkaplan_muzik.load("sounds/m2.mp3");
-        arkaplan_muzik.setVolume(0.8f);
+        arkaplan_muzik.load("sounds/kovboysound (mp3cut.net).mp3");
+        arkaplan_muzik.setVolume(0.3f);
         arkaplan_muzik.prepare();
         arkaplan_muzik.start();
+
+
 
         laser = Utils.loadImage(root, "images/beams1.png");
         lasersrc = new Rect();
@@ -183,6 +190,16 @@ public class GameCanvas extends BaseCanvas {
         hizx = 0;
         hizy = 0;
 
+        textdst = new Rect();
+        textcolor = new Paint();
+        textcolor.setARGB(255,255,0,0);
+        textsize = 64;
+        textcolor.setTextSize(textsize);
+        text = "GAME OVER";
+
+        textcolor.getTextBounds(text, 0, text.length(), textdst);
+
+
 
     }
 
@@ -191,12 +208,9 @@ public class GameCanvas extends BaseCanvas {
     public void update() {
 
         tilesrc.set(0,0,64,64);
-        playsrc.set(0,0,256,256);
-        playdst.set(getWidthHalf() - 64, getHeightHalf()-64, getWidthHalf() +64, getHeightHalf() + 64);
 
-        if (playshow){
-            return;
-        }
+
+
 
 
         lasersrc.set(0,0,64,128);
@@ -204,10 +218,10 @@ public class GameCanvas extends BaseCanvas {
 
 
         restartsrc.set(256,0,512,256);
-        exitsrc.set(512,0,768,256);
 
-        restartdst.set(getWidthHalf() - 192, getHeightHalf()-64, getWidthHalf() -64, getHeightHalf() + 64);
-        exitdst.set(getWidthHalf() + 64, getHeightHalf()-64, getWidthHalf() + 192, getHeightHalf() + 64);
+
+        restartdst.set(getWidthHalf() - 64, getHeightHalf()-64, getWidthHalf() +64, getHeightHalf() + 64);
+
 
 
 
@@ -225,7 +239,7 @@ public class GameCanvas extends BaseCanvas {
         laserdst.set(laserx1, lasery, laserx1 + 32, lasery + 64);
         laserdst2.set(laserx2, lasery, laserx2 + 32, lasery + 64);
 
-        if (spritedst.contains(laserdst) || spritedst.contains(laserdst2)){
+        if (spritedst.intersect(laserdst) || spritedst.intersect(laserdst2)){
             spritedst.set(0,0,0,0);
             spriteExist = false;
             guishow = true;
@@ -263,16 +277,15 @@ public class GameCanvas extends BaseCanvas {
                //Log.i(TAG, "Carpıştı");                                //kadar robot şeklinde ilerledi. Ama .contains yazdığımızda kurşunları içermiş oldu ve hata düzeldi.
 
                 explodedst.set(enemyX - 64, enemyY - 64, enemyX + 256, enemyY + 256);
-                bulletx2.removeElementAt(i);
-                bullety2.removeElementAt(i);
-                /*bulletoffsetx2.removeElementAt(i);
-                bulletoffsety2.removeElementAt(i);*/
-                bulletdst.removeElementAt(i);
-                bulletspeedx2.removeElementAt(i);
-                bulletspeedy2.removeElementAt(i);
+                bulletx2.removeAllElements();
+                bullety2.removeAllElements();
+                bulletdst.removeAllElements();
+                bulletspeedx2.removeAllElements();
+                bulletspeedy2.removeAllElements();
                 enemyexist=false;
                 enemydst.set(0,0,0,0);
                 exploded = true;
+                guishow = true;
                 root.soundManager.play(sesEfekti_patlama);
 
             }
@@ -355,6 +368,7 @@ public class GameCanvas extends BaseCanvas {
             animasyonno = 1;
         }
         else {
+
             animasyonno = 0;
         }
 
@@ -380,10 +394,8 @@ public class GameCanvas extends BaseCanvas {
 
     public void draw(Canvas canvas) {
 
-
-
         for (int i=0;i<getWidth();i+=128){
-            for(int j=0;j<getHeight();j+=128){
+            for(int j=0;j<getHeight();j+=128) {
                 tiledst.set(i, j, i+128, j+128);
                 canvas.drawBitmap(tileset,tilesrc,tiledst,null);
             }
@@ -412,14 +424,16 @@ public class GameCanvas extends BaseCanvas {
 
 
         //region Buttons
-        if(playshow) {
-            canvas.drawBitmap(buttons, playsrc, playdst, null);
-        }
+
 
         if (guishow) {
+            canvas.drawText(text, getWidthHalf()- 170, getHeightHalf() -300, textcolor);
+            //canvas.drawBitmap();
+
+            arkaplan_muzik.stop();
 
             canvas.drawBitmap(buttons, restartsrc, restartdst, null);
-            canvas.drawBitmap(buttons, exitsrc, exitdst, null);
+
         }
         //endregion
 
@@ -536,29 +550,20 @@ public class GameCanvas extends BaseCanvas {
             bullety_temp = spritey + bulletoffsety_temp;
 
             bulletdst.add(new Rect(bulletx_temp, bullety_temp, bulletx_temp +32, bullety_temp + 32));
+            root.soundManager.play(bulletsound);
         }
         //endregion
 
         //region guicontrol
-        if (playshow){
-            if (playdst.contains(x, y)) {
-                Log.i(TAG, "PLAY TIKLANDI");
-                playshow = false;
 
-            }
-        }
         if(guishow) {
 
             if (restartdst.contains(x, y)) {
-                Log.i(TAG, "RESTART TIKLANDI");
-                root.setup();
+               // Log.i(TAG, "RESTART TIKLANDI");
+                setup();
 
             }
-            if (exitdst.contains(x, y)) {
-                Log.i(TAG, "EXIT TIKLANDI");
 
-                System.exit(0);
-            }
         }
 
         //endregion

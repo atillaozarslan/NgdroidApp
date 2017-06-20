@@ -1,8 +1,11 @@
 package com.ngdroidapp;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Rect;
 
 import istanbul.gamelab.ngdroid.base.BaseCanvas;
+import istanbul.gamelab.ngdroid.util.Utils;
 
 /**
  * Created by noyan on 24.06.2016.
@@ -10,6 +13,7 @@ import istanbul.gamelab.ngdroid.base.BaseCanvas;
  */
 
 public class InitialisationCanvas extends BaseCanvas {
+
 
     public InitialisationCanvas(NgApp ngApp) {
         super(ngApp);
@@ -20,7 +24,8 @@ public class InitialisationCanvas extends BaseCanvas {
 
 
     public void update() {
-        GameCanvas mc = new GameCanvas(root);
+        //GameCanvas mc = new GameCanvas(root);
+        MenuCanvas mc = new MenuCanvas(root); //Objemizi oluşturduk
         root.canvasManager.setCurrentCanvas(mc);
     }
 
